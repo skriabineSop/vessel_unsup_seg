@@ -1,21 +1,15 @@
 import os
-
 import torch
 from torch import nn
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
-
 if not os.path.exists('./mlp_img'):
     os.mkdir('./mlp_img')
-
-
 
 num_epochs = 100
 batch_size = 128
 learning_rate = 1e-3
-
-
 
 #autoencoder test
 class autoencoder(nn.Module):
@@ -64,5 +58,5 @@ def main(dataloader):
               .format(epoch + 1, num_epochs, loss.data[0]))
         if epoch % 10 == 0:
             # check the output
-            print 'save picture'
+            print('save picture')
         torch.save(model.state_dict(), './sim_autoencoder.pth')
