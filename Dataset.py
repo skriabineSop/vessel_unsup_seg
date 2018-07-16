@@ -13,7 +13,7 @@ class Dataset(Dataset):
             workdir (string): Directory with all the images.
         """
         self.load_dir = workdir
-        self.data = os.listdir(workdir)
+        self.data =[file for file in os.listdir(workdir) if '.tif' in file]
 
 
 

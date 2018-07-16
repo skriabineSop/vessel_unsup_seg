@@ -3,6 +3,7 @@ import torch
 from torch import nn
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
+from Dataset import Dataset
 
 if not os.path.exists('./mlp_img'):
     os.mkdir('./mlp_img')
@@ -10,6 +11,7 @@ if not os.path.exists('./mlp_img'):
 num_epochs = 100
 batch_size = 128
 learning_rate = 1e-3
+workdir = '/mnt/raid/UnsupSegment/180509_IgG_10-43-24'
 
 #autoencoder test
 class autoencoder(nn.Module):
@@ -35,7 +37,9 @@ class autoencoder(nn.Module):
 
 
 
-def main(dataloader):
+def main():
+    dataset = Dataset(workdir)
+    dataloader = DataLoader(dataset)
     model = autoencoder().cuda()
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(
