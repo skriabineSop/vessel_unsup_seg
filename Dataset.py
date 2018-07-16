@@ -13,7 +13,14 @@ class Dataset(Dataset):
             workdir (string): Directory with all the images.
         """
         self.load_dir = workdir
-        self.data =[file for file in os.listdir(workdir) if '.tif' in file]
+        data=[]
+        for path, subdirs, files in os.walk(workdir):
+            for name in files:
+                if '.tif' in name:
+                    print os.path.join(path, name)
+                    data.append(os.path.join(path, name))
+        self.data=data
+
 
 
 
@@ -21,6 +28,6 @@ class Dataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        image = io.imread(os.path.join(self.load_dir, file))
+        image = io.imread(os.path.join(self.load_dir, self.data[idx]))
 
         return image
