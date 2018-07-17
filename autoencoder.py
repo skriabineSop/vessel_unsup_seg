@@ -18,21 +18,26 @@ class autoencoder(nn.Module):
     def __init__(self):
         super(autoencoder, self).__init__()
         self.encoder = nn.Sequential(
-            nn.Linear(28 * 28, 128),
+            nn.Conv3d(1, 32, 3, stride=1),
             nn.ReLU(True),
-            nn.Linear(128, 64),
-            nn.ReLU(True), nn.Linear(64, 12), nn.ReLU(True), nn.Linear(12, 3))
+            nn.Conv3d(32, 16, 3, stride=1),
+            nn.ReLU(True), nn.Linear(64, 12), nn.ReLU(True), nn.Linear(12, 3),
+            nn.Conv3d(16, 2, 3, stride=1),
+            nn.Softmax(dim=1))
+
         self.decoder = nn.Sequential(
-            nn.Linear(3, 12),
+            nn.Conv3d(2, 16, 3, stride=1),
             nn.ReLU(True),
-            nn.Linear(12, 64),
+            nn.Conv3d(16, 32, 3, stride=1),
             nn.ReLU(True),
-            nn.Linear(64, 128),
-            nn.ReLU(True), nn.Linear(128, 28 * 28), nn.Tanh())
+            nn.Conv3d(32, 1, 3, stride=1))
 
     def forward(self, x):
+        print(x.shape)
         x = self.encoder(x)
+        print(x.shape)
         x = self.decoder(x)
+        print(x.shape)
         return x
 
 
