@@ -2,7 +2,7 @@ import os
 import torch
 from torch import nn
 from torch.autograd import Variable
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 from Dataset import Dataset
 from visualize import plot3d, show
 
