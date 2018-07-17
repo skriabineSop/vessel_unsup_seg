@@ -17,7 +17,7 @@ class Dataset(Dataset):
         data=[]
         for path, subdirs, files in os.walk(workdir):
             for name in files:
-                if '.tif' in name:
+                if '.npy' in name:
                     print(os.path.join(path, name))
                     data.append(os.path.join(path, name))
         self.data = data
