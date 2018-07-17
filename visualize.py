@@ -1,6 +1,7 @@
 import vispy
 import vispy.color
 import vispy.scene
+from vispy import scene
 import vispy.app
 import vispy.visuals
 import numpy as np
@@ -25,6 +26,33 @@ def show():
     vispy.app.run()
 
 
+def get_two_views():
+    """
+    Get two views in order to plot two graphs/images in a consistent manner
+    """
+    canvas = vispy.scene.SceneCanvas(keys='interactive', title='plot3d', show=True)
+    vb1 = scene.widgets.ViewBox(border_color='yellow', parent=canvas.scene, camera=tc.TurntableCamera())
+    vb2 = scene.widgets.ViewBox(border_color='blue', parent=canvas.scene, camera=tc.TurntableCamera())
+
+    grid = canvas.central_widget.add_grid()
+    grid.padding = 6
+    grid.add_widget(vb1, 0, 0)
+    grid.add_widget(vb2, 0, 1)
+
+    for view in vb1, vb2:
+        view.camera = 'turntable'
+        view.camera.fov = 100
+        view.camera.distance = 0
+        view.camera.elevation = 0
+        view.camera.azimuth = 0
+
+    vb1.camera.aspect = vb2.camera.aspect = 1
+    vb1.camera.link(vb2.camera)
+
+    return vb1, vb2
+
+
+
 def plot3d(data, colormap = FireMap(), view=None):
     VolumePlot3D = vispy.scene.visuals.create_visual_node(vispy.visuals.VolumeVisual)
     # Add a ViewBox to let the user zoom/rotate
@@ -38,17 +66,23 @@ def plot3d(data, colormap = FireMap(), view=None):
         view.camera.elevation = 31
         view.camera.azimuth = 0
         view.camera.depth_value = 100000000
-        cc = (np.array(data.shape) // 2)
-        view.camera.center = cc
+
+    cc = (np.array(data.shape) // 2)
+    view.camera.center = cc
 
     return VolumePlot3D(data.transpose([2, 1, 0]), method='translucent', relative_step_size=1.5,
                         parent=view.scene, cmap=colormap)
 
 
-if __name__ == '__init__':
+if __name__ == '__main__':
 
-    savedir = '/mnt/raid/UnsupSegment/patches'
+    readdir = 'logs'
+    N = 500
 
-    image = np.load(os.path.join(savedir, '10-43-24_IgG_UltraII[04 x 08]_C00_patch_760_520_320.npy'))
-    plot3d(image)
+    img = np.load(os.path.join(readdir, 'input_' + str(N) + '.npy'))
+    output = np.load(os.path.join(readdir, 'output_' + str(N) + '.npy'))
+
+    vb1, vb2 = get_two_views()
+    plot3d(img, view=vb1)
+    plot3d(output, view=vb2)
     show()
