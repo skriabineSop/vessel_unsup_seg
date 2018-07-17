@@ -2,7 +2,7 @@ import os
 import torch
 from torch import nn
 from torch.autograd import Variable
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 from Dataset import Dataset
 
 if not os.path.exists('./mlp_img'):
