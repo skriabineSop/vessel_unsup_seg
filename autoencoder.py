@@ -44,6 +44,14 @@ class autoencoder(nn.Module):
         return x
 
 
+def preprocess(x):
+    x = torch.clamp(x, max=20000.)
+    x = torch.clamp(x, min=500.)
+    x -= 500.
+    x /= 19500
+    return x
+
+
 def main():
 
     print("load dataset")
@@ -67,7 +75,8 @@ def main():
                 img = data.float().cuda()
             else:
                 img = data.float()
-
+            # ===================preprocess=====================
+            img = preprocess(img)
             img = Variable(img)
             # ===================forward=====================
             output = model(img)
