@@ -10,7 +10,7 @@ import numpy as np
 num_epochs = 100
 batch_size = 128
 learning_rate = 1e-3
-workdir = '/Users/paul.bertin/PycharmProjects/vessel_unsup_seg/data'
+workdir = '.'
 
 
 # autoencoder test
@@ -85,7 +85,10 @@ def test():
         model = autoencoder()
 
     for data in dataloader:
-        img = data.float()
+        if torch.cuda.is_available():
+            img = data.float().cuda()
+        else:
+            img = data.float()
         plot3d(np.array(img).reshape((40, 40, 40)))
         show()
 
