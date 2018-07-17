@@ -11,8 +11,12 @@ from tensorboardX import SummaryWriter
 num_epochs = 100
 batch_size = 128
 learning_rate = 1e-3
+
 workdir = '/mnt/raid/UnsupSegment/patches/10-43-24_IgG_UltraII[02 x 05]_C00'
-writer = SummaryWriter('logs')
+logdir = 'logs'
+savedmodeldir = 'savedModels'
+
+writer = SummaryWriter(logdir)
 
 # autoencoder test
 class autoencoder(nn.Module):
@@ -69,6 +73,11 @@ def main():
             output = model(img)
             loss = criterion(output, img)
             writer.add_scalar('Train/Loss', loss, num_iteration)
+            if num_iteration % 500 == 0:
+                writer.add_image('Train/Input', img.data[0, :, 20], num_iteration)
+                writer.add_image('Train/Output', output.data[0, :, 20], num_iteration)
+                np.save(os.path.join(logdir, 'output_' + str(num_iteration)), output.data[0, 0])
+                np.save(os.path.join(logdir, 'input_' + str(num_iteration)), img.data[0, 0])
             # ===================backward====================
             optimizer.zero_grad()
             loss.backward()
@@ -80,7 +89,7 @@ def main():
         if epoch % 10 == 0:
             # check the output
             print('save picture')
-        torch.save(model.state_dict(), './sim_autoencoder.pth')
+        torch.save(model.state_dict(), os.path.join(savedmodeldir, 'sim_autoencoder.pth'))
 
 
 def test():
