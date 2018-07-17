@@ -18,7 +18,6 @@ class Dataset(Dataset):
         for path, subdirs, files in os.walk(workdir):
             for name in files:
                 if '.npy' in name:
-                    print(os.path.join(path, name))
                     data.append(os.path.join(path, name))
         self.data = data
 

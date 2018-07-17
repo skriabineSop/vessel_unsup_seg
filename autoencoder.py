@@ -10,7 +10,7 @@ import numpy as np
 num_epochs = 100
 batch_size = 128
 learning_rate = 1e-3
-workdir = '.'
+workdir = '/mnt/raid/UnsupSegment/patches'
 
 
 # autoencoder test
@@ -44,7 +44,7 @@ class autoencoder(nn.Module):
 
 def main():
     dataset = Dataset(workdir)
-    dataloader = DataLoader(dataset)
+    dataloader = DataLoader(dataset, shuffle=True)
     if torch.cuda.is_available():
         model = autoencoder().cuda()
     else:
@@ -52,14 +52,16 @@ def main():
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
+    print("begin training")
+
     for epoch in range(num_epochs):
         for data in dataloader:
-            img, _ = data
-            img = img.view(img.size(0), -1)
             if torch.cuda.is_available():
-                img = Variable(img).cuda()
+                img = data.float().cuda()
             else:
-                img = Variable(img)
+                img = data.float()
+
+            img = Variable(img)
             # ===================forward=====================
             output = model(img)
             loss = criterion(output, img)
@@ -98,4 +100,4 @@ def test():
 
 
 if __name__ == "__main__":
-    test()
+    main()
