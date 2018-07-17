@@ -14,7 +14,7 @@ class Dataset(Dataset):
             workdir (string): Directory with all the images.
         """
         self.load_dir = workdir
-        data=[]
+        data = []
         for path, subdirs, files in os.walk(workdir):
             for name in files:
                 if '.npy' in name:
@@ -26,6 +26,6 @@ class Dataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        image = io.imread(os.path.join(self.load_dir, self.data[idx]))
-
+        image = np.load(os.path.join(self.load_dir, self.data[idx])).astype(float)
+        image = image.reshape((1,) + image.shape)
         return image
