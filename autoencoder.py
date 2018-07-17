@@ -6,12 +6,13 @@ from torch.utils.data import DataLoader # , Dataset
 from dataset import Dataset
 from visualize import plot3d, show
 import numpy as np
+from tensorboardX import SummaryWriter
 
 num_epochs = 100
 batch_size = 128
 learning_rate = 1e-3
-workdir = '/mnt/raid/UnsupSegment/patches'
-
+workdir = '/mnt/raid/UnsupSegment/patches/10-43-24_IgG_UltraII[02 x 05]_C00'
+writer = SummaryWriter('logs')
 
 # autoencoder test
 class autoencoder(nn.Module):
@@ -34,17 +35,18 @@ class autoencoder(nn.Module):
             nn.Conv3d(32, 1, 3, stride=1, padding=(1, 1, 1)))
 
     def forward(self, x):
-        print(x.shape)
         x = self.encoder(x)
-        print(x.shape)
         x = self.decoder(x)
-        print(x.shape)
         return x
 
 
 def main():
+
+    print("load dataset")
     dataset = Dataset(workdir)
-    dataloader = DataLoader(dataset, shuffle=True)
+    dataloader = DataLoader(dataset, shuffle=True,  batch_size=16)
+
+    print("Initialize model")
     if torch.cuda.is_available():
         model = autoencoder().cuda()
     else:
@@ -53,6 +55,7 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
     print("begin training")
+    num_iteration = 0
 
     for epoch in range(num_epochs):
         for data in dataloader:
@@ -65,10 +68,12 @@ def main():
             # ===================forward=====================
             output = model(img)
             loss = criterion(output, img)
+            writer.add_scalar('Train/Loss', loss, num_iteration)
             # ===================backward====================
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            num_iteration += 1
         # ===================log========================
         print('epoch [{}/{}], loss:{:.4f}'
               .format(epoch + 1, num_epochs, loss.data[0]))
