@@ -4,6 +4,7 @@ from torch import nn
 from torch.autograd import Variable
 from torch.utils.data import DataLoader, Dataset
 from Dataset import Dataset
+from visualize import plot3d, show
 
 if not os.path.exists('./mlp_img'):
     os.mkdir('./mlp_img')
@@ -11,9 +12,9 @@ if not os.path.exists('./mlp_img'):
 num_epochs = 100
 batch_size = 128
 learning_rate = 1e-3
-workdir = '/mnt/raid/UnsupSegment/180509_IgG_10-43-24'
+workdir = '/Users/paul.bertin/PycharmProjects/vessel_unsup_seg/data/10-43-24_IgG_UltraII[02 x 10]_C00.ome.tif'
 
-#autoencoder test
+# autoencoder test
 class autoencoder(nn.Module):
     def __init__(self):
         super(autoencoder, self).__init__()
@@ -41,20 +42,24 @@ class autoencoder(nn.Module):
         return x
 
 
-
 def main():
     dataset = Dataset(workdir)
     dataloader = DataLoader(dataset)
-    model = autoencoder().cuda()
+    if torch.cuda.is_available():
+        model = autoencoder().cuda()
+    else:
+        model = autoencoder()
     criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(
-        model.parameters(), lr=learning_rate, weight_decay=1e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
 
     for epoch in range(num_epochs):
         for data in dataloader:
             img, _ = data
             img = img.view(img.size(0), -1)
-            img = Variable(img).cuda()
+            if torch.cuda.is_available():
+                img = Variable(img).cuda()
+            else:
+                img = Variable(img)
             # ===================forward=====================
             output = model(img)
             loss = criterion(output, img)
@@ -69,3 +74,21 @@ def main():
             # check the output
             print('save picture')
         torch.save(model.state_dict(), './sim_autoencoder.pth')
+
+
+def test():
+    dataset = Dataset(workdir)
+    dataloader = DataLoader(dataset)
+    if torch.cuda.is_available():
+        model = autoencoder().cuda()
+    else:
+        model = autoencoder()
+
+    for data in dataloader:
+        img, _ = data
+        plot3d(img)
+        show()
+
+
+if __name__ == "__main__":
+    test()
