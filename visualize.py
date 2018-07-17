@@ -74,11 +74,7 @@ def plot3d(data, colormap = FireMap(), view=None):
                         parent=view.scene, cmap=colormap)
 
 
-if __name__ == '__main__':
-
-    readdir = 'logs'
-    N = 500
-
+def reconstructionView(readdir, N):
     img = np.load(os.path.join(readdir, 'input_' + str(N) + '.npy'))
     output = np.load(os.path.join(readdir, 'output_' + str(N) + '.npy'))
 
@@ -86,3 +82,11 @@ if __name__ == '__main__':
     plot3d(img, view=vb1)
     plot3d(output, view=vb2)
     show()
+
+
+if __name__ == '__main__':
+
+    readdir = 'logs/training170718_1'
+    N = 3000
+
+    reconstructionView(readdir, N)
