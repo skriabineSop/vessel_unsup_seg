@@ -3,8 +3,9 @@ import torch
 from torch import nn
 from torch.autograd import Variable
 from torch.utils.data import DataLoader, Dataset
-from Dataset import Dataset
+from dataset import Dataset
 from visualize import plot3d, show
+import numpy as np
 
 if not os.path.exists('./mlp_img'):
     os.mkdir('./mlp_img')
@@ -12,17 +13,19 @@ if not os.path.exists('./mlp_img'):
 num_epochs = 100
 batch_size = 128
 learning_rate = 1e-3
-workdir = '/Users/paul.bertin/PycharmProjects/vessel_unsup_seg/data/10-43-24_IgG_UltraII[02 x 10]_C00.ome.tif'
+workdir = '/Users/paul.bertin/PycharmProjects/vessel_unsup_seg/data'
+
 
 # autoencoder test
 class autoencoder(nn.Module):
+
     def __init__(self):
         super(autoencoder, self).__init__()
         self.encoder = nn.Sequential(
             nn.Conv3d(1, 32, 3, stride=1),
             nn.ReLU(True),
             nn.Conv3d(32, 16, 3, stride=1),
-            nn.ReLU(True), nn.Linear(64, 12), nn.ReLU(True), nn.Linear(12, 3),
+            nn.ReLU(True),
             nn.Conv3d(16, 2, 3, stride=1),
             nn.Softmax(dim=1))
 
@@ -85,8 +88,12 @@ def test():
         model = autoencoder()
 
     for data in dataloader:
-        img, _ = data
-        plot3d(img)
+        img = data.float()
+        # plot3d(np.array(img).reshape((40, 40, 40)))
+        # show()
+
+        output = model(Variable(img))
+        plot3d(np.array(output).reshape((40, 40, 40)))
         show()
 
 
