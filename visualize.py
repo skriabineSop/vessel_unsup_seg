@@ -86,7 +86,13 @@ def reconstructionView(readdir, N):
 
 if __name__ == '__main__':
 
-    readdir = 'logs/training170718_1'
-    N = 3000
+    readdir = 'logs/training180718_1'
+    N = 0
 
     reconstructionView(readdir, N)
+
+    plot3d(np.load(os.path.join(readdir, 'kernel_' + str(N) + '.npy')))
+    show()
+
+    plot3d(np.load(os.path.join(readdir, 'latent_' + str(N) + '.npy')))
+    show()
