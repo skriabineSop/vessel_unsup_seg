@@ -13,45 +13,54 @@ num_epochs = 100
 batch_size = 128
 learning_rate = 1e-3
 
-workdir = '/home/sophie.skriabine/Documents/brainSeg/patches'
-logdir = 'logs'
+datadir = '/mnt/raid/UnsupSegment/patches/10-43-24_IgG_UltraII[02 x 05]_C00'
+logdir = 'logs/training180718_1'
 savedmodeldir = 'savedModels'
-sigma=3
-kernel_size=15
+sigma = 3
+kernel_size = 5
+Lambda = 10000  # Used to weight relative importance of reconstruction loss and min cut loss
 
 writer = SummaryWriter(logdir)
 
 
-def gaussian_filtering():
-    gauss_filter = GaussianKernel(sigma, kernel_size).kernel
+def get_gaussian_filter(sigma, kernel_size):
+    if torch.cuda.is_available():
+        gauss_filter = GaussianKernel(sigma, kernel_size).kernel.float().cuda()
+    else:
+        gauss_filter = GaussianKernel(sigma, kernel_size).kernel.float()
     return gauss_filter
 
-def soft_cut_loss(x):
-    if torch.cuda.is_available():
-        gauss_filter=gaussian_filtering().float().cuda()
-        res=torch.tensor(0).float().cuda()
-    else:
-        gauss_filter = gaussian_filtering().float()
-        res = torch.tensor(0).float()
-    for i in range(x.shape[1]):
-        gauss = F.conv3d(x[:, i, :, :, :][np.newaxis, :], gauss_filter[np.newaxis, :],bias=None, stride=1, padding=(1, 1, 1))
-        mul=torch.mul(x[:, i, :, :, :][np.newaxis, :], gauss)
-        numerator=torch.sum(mul)
-        sum_gauss=torch.sum(gauss)
-        sub_denom=torch.mul(x[:, i, :, :, :][np.newaxis, :], sum_gauss)
-        denom=torch.sum(sub_denom)
-        res=numerator/denom
-        # res+=torch.sum(torch.mul(x[:, i, :, :, :][np.newaxis, :], gauss))#/torch.sum(torch.mul(x[:, i, :, :, :], torch.sum(gauss)))
-        print(res)
 
-    result= 2-res
+def soft_cut_loss(x, kernel):
+    if torch.cuda.is_available():
+        res = torch.tensor(0).float().cuda()
+    else:
+        res = torch.tensor(0).float()
+
+    for i in range(x.shape[1]):
+        gauss = F.conv3d(x[:, i:i+1, :, :, :],
+                         kernel[np.newaxis, :], bias=None, stride=1, padding=(2, 2, 2))
+        mul = torch.mul(x[:, i:i+1, :, :, :], gauss)
+        numerator = torch.sum(mul)
+        sum_gauss = torch.sum(gauss)
+        sub_denom = torch.mul(x[:, i:i+1, :, :, :], sum_gauss)
+        denom = torch.sum(sub_denom)
+        res = numerator/denom
+
+    result = x.shape[1] - res
+
     return result
+
 
 # autoencoder test
 class autoencoder(nn.Module):
 
     def __init__(self):
+
+        self.soft_cut_kernel = get_gaussian_filter(sigma, kernel_size)
+
         super(autoencoder, self).__init__()
+
         self.encoder = nn.Sequential(
             nn.Conv3d(1, 32, 3, stride=1, padding=(1, 1, 1)),
             nn.ReLU(True),
@@ -71,9 +80,10 @@ class autoencoder(nn.Module):
 
     def forward(self, x):
         x = self.encoder(x)
-        self.soft_cut_loss=soft_cut_loss(x)
+        latent = x
+        self.soft_cut_loss = soft_cut_loss(x, self.soft_cut_kernel)
         x = self.decoder(x)
-        return x
+        return x, latent
 
 
 def preprocess(x):
@@ -87,7 +97,7 @@ def preprocess(x):
 def main():
 
     print("load dataset")
-    dataset = Dataset(workdir)
+    dataset = Dataset(datadir)
     dataloader = DataLoader(dataset, shuffle=True,  batch_size=16)
 
     print("Initialize model")
@@ -111,14 +121,20 @@ def main():
             img = preprocess(img)
             img = Variable(img)
             # ===================forward=====================
-            output = model(img)
-            loss = criterion(output, img) + model.soft_cut_loss
+            output, latent = model(img)
+            reconstruction_loss = criterion(output, img)
+            loss = reconstruction_loss + Lambda * model.soft_cut_loss
+            writer.add_scalar('Train/Loss', loss, num_iteration)
+            writer.add_scalar('Train/ReconstructionLoss', reconstruction_loss, num_iteration)
+            writer.add_scalar('Train/SoftCutLoss', model.soft_cut_loss, num_iteration)
             writer.add_scalar('Train/Loss', loss, num_iteration)
             if num_iteration % 500 == 0:
                 writer.add_image('Train/Input', img.data[0, :, 20], num_iteration)
                 writer.add_image('Train/Output', output.data[0, :, 20], num_iteration)
+                np.save(os.path.join(logdir, 'kernel_' + str(num_iteration)), model.soft_cut_kernel[0])
                 np.save(os.path.join(logdir, 'output_' + str(num_iteration)), output.data[0, 0])
                 np.save(os.path.join(logdir, 'input_' + str(num_iteration)), img.data[0, 0])
+                np.save(os.path.join(logdir, 'latent_' + str(num_iteration)), latent.data[0, 0])
             # ===================backward====================
             optimizer.zero_grad()
             loss.backward()
@@ -126,7 +142,7 @@ def main():
             num_iteration += 1
         # ===================log========================
         print('epoch [{}/{}], loss:{:.4f}'
-              .format(epoch + 1, num_epochs, loss.data[0]))
+              .format(epoch + 1, num_epochs, loss.data))
         if epoch % 10 == 0:
             # check the output
             print('save picture')
@@ -134,7 +150,7 @@ def main():
 
 
 def test():
-    dataset = Dataset(workdir)
+    dataset = Dataset(datadir)
     dataloader = DataLoader(dataset)
     if torch.cuda.is_available():
         model = autoencoder().cuda()
@@ -149,7 +165,7 @@ def test():
         plot3d(np.array(img).reshape((40, 40, 40)))
         show()
 
-        output = model(Variable(img))
+        output, latent = model(Variable(img))
         plot3d(np.array(output.data).reshape((40, 40, 40)))
         show()
 
