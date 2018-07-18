@@ -14,7 +14,7 @@ sigma = 3
 
 class GaussianKernel():
 
-    def __init__(self, kernel_size, sigma):
+    def __init__(self, sigma, kernel_size):
         self.kernel_size = kernel_size
         self.sigma = sigma
         # X, Y, Z = np.mgrid[0:kernel_size, 0:kernel_size, 0:kernel_size]
