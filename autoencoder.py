@@ -9,12 +9,15 @@ import numpy as np
 from tensorboardX import SummaryWriter
 import torch.nn.functional as F
 from gaussianKernel import GaussianKernel
+from soft_cut_loss import Soft_cut_loss
+
 num_epochs = 100
 batch_size = 128
 learning_rate = 1e-3
 
-datadir = '/mnt/raid/UnsupSegment/patches/10-43-24_IgG_UltraII[02 x 05]_C00'
-logdir = 'logs/training180718_1'
+#datadir = '/mnt/raid/UnsupSegment/patches/10-43-24_IgG_UltraII[02 x 05]_C00' # ordi fixe
+datadir = '/home/sophie.skriabine/Documents/brainSeg/patches' # ordi fixe
+logdir = 'logs'
 savedmodeldir = 'savedModels'
 sigma = 4
 kernel_size = 11
@@ -82,6 +85,7 @@ class autoencoder(nn.Module):
         x = self.encoder(x)
         latent = x
         self.soft_cut_loss = soft_cut_loss(x, self.soft_cut_kernel)
+        self.intermediate = x
         x = self.decoder(x)
         return x, latent
 
@@ -105,7 +109,9 @@ def main():
         model = autoencoder().cuda()
     else:
         model = autoencoder()
-    criterion = nn.MSELoss()
+    criterion1 = nn.MSELoss()
+    criterion2 = Soft_cut_loss()
+
     # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
     print('parameters', model.parameters())
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-1)
@@ -124,10 +130,11 @@ def main():
             img = Variable(img)
             # ===================forward=====================
             output, latent = model(img)
-            reconstruction_loss = criterion(output, img)
-
+            reconstruction_loss = criterion1(output, img)
+            soft_loss = criterion2(Variable(model.intermediate, requires_grad=True), Variable(model.soft_cut_kernel, requires_grad=True))
             # loss = reconstruction_loss + Lambda * model.soft_cut_loss
-            loss = model.soft_cut_loss
+            # loss = model.soft_cut_loss
+            loss = soft_loss
 
             writer.add_scalar('Train/Loss', loss, num_iteration)
             writer.add_scalar('Train/ReconstructionLoss', reconstruction_loss, num_iteration)
@@ -141,7 +148,7 @@ def main():
                 np.save(os.path.join(logdir, 'output_' + str(num_iteration)), output.data[0, 0])
                 np.save(os.path.join(logdir, 'input_' + str(num_iteration)), img.data[0, 0])
                 np.save(os.path.join(logdir, 'latent1_' + str(num_iteration)), latent.data[0, 0])
-                np.save(os.path.join(logdir, 'latent2_' + str(num_iteration)), latent.data[1, 0])
+                #np.save(os.path.join(logdir, 'latent2_' + str(num_iteration)), latent.data[1, 0])
 
             # ===================backward====================
             optimizer.zero_grad()
