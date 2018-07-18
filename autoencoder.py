@@ -7,16 +7,45 @@ from dataset import Dataset
 from visualize import plot3d, show
 import numpy as np
 from tensorboardX import SummaryWriter
-
+import torch.nn.functional as F
+from gaussianKernel import GaussianKernel
 num_epochs = 100
 batch_size = 128
 learning_rate = 1e-3
 
-workdir = '/mnt/raid/UnsupSegment/patches/10-43-24_IgG_UltraII[02 x 05]_C00'
+workdir = '/home/sophie.skriabine/Documents/brainSeg/patches'
 logdir = 'logs'
 savedmodeldir = 'savedModels'
+sigma=3
+kernel_size=15
 
 writer = SummaryWriter(logdir)
+
+
+def gaussian_filtering():
+    gauss_filter = GaussianKernel(sigma, kernel_size).kernel
+    return gauss_filter
+
+def soft_cut_loss(x):
+    if torch.cuda.is_available():
+        gauss_filter=gaussian_filtering().float().cuda()
+        res=torch.tensor(0).float().cuda()
+    else:
+        gauss_filter = gaussian_filtering().float()
+        res = torch.tensor(0).float()
+    for i in range(x.shape[1]):
+        gauss = F.conv3d(x[:, i, :, :, :][np.newaxis, :], gauss_filter[np.newaxis, :],bias=None, stride=1, padding=(1, 1, 1))
+        mul=torch.mul(x[:, i, :, :, :][np.newaxis, :], gauss)
+        numerator=torch.sum(mul)
+        sum_gauss=torch.sum(gauss)
+        sub_denom=torch.mul(x[:, i, :, :, :][np.newaxis, :], sum_gauss)
+        denom=torch.sum(sub_denom)
+        res=numerator/denom
+        # res+=torch.sum(torch.mul(x[:, i, :, :, :][np.newaxis, :], gauss))#/torch.sum(torch.mul(x[:, i, :, :, :], torch.sum(gauss)))
+        print(res)
+
+    result= 2-res
+    return result
 
 # autoencoder test
 class autoencoder(nn.Module):
@@ -38,8 +67,11 @@ class autoencoder(nn.Module):
             nn.ReLU(True),
             nn.Conv3d(32, 1, 3, stride=1, padding=(1, 1, 1)))
 
+        self.soft_cut_loss = 0
+
     def forward(self, x):
         x = self.encoder(x)
+        self.soft_cut_loss=soft_cut_loss(x)
         x = self.decoder(x)
         return x
 
@@ -80,7 +112,7 @@ def main():
             img = Variable(img)
             # ===================forward=====================
             output = model(img)
-            loss = criterion(output, img)
+            loss = criterion(output, img) + model.soft_cut_loss
             writer.add_scalar('Train/Loss', loss, num_iteration)
             if num_iteration % 500 == 0:
                 writer.add_image('Train/Input', img.data[0, :, 20], num_iteration)

@@ -59,6 +59,7 @@ class GaussianKernel():
         # Make sure sum of values in gaussian kernel equals 1.
         gaussian_kernel = gaussian_kernel / np.sum(gaussian_kernel)
         gaussian_kernel = gaussian_kernel.reshape((1,) + gaussian_kernel.shape)
+        gaussian_kernel = gaussian_kernel.reshape((1,) + gaussian_kernel.shape)
         gaussian_kernel = Variable(gaussian_kernel)
         # Reshape to 2d depthwise convolutional weight
         #gaussian_kernel = gaussian_kernel.view(1, 1, kernel_size, kernel_size)
