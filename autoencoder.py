@@ -2,7 +2,7 @@ import os
 import torch
 from torch import nn
 from torch.autograd import Variable
-from torch.utils.data import DataLoader # , Dataset
+from torch.utils.data import DataLoader  # , Dataset
 from dataset import Dataset
 from visualize import plot3d, show
 import numpy as np
@@ -16,9 +16,9 @@ learning_rate = 1e-3
 datadir = '/mnt/raid/UnsupSegment/patches/10-43-24_IgG_UltraII[02 x 05]_C00'
 logdir = 'logs/training180718_1'
 savedmodeldir = 'savedModels'
-sigma = 3
-kernel_size = 5
-Lambda = 10000  # Used to weight relative importance of reconstruction loss and min cut loss
+sigma = 4
+kernel_size = 11
+Lambda = 1  # Used to weight relative importance of reconstruction loss and min cut loss
 
 writer = SummaryWriter(logdir)
 
@@ -33,13 +33,13 @@ def get_gaussian_filter(sigma, kernel_size):
 
 def soft_cut_loss(x, kernel):
     if torch.cuda.is_available():
-        res = torch.tensor(0).float().cuda()
+        res = Variable(torch.tensor(0).float().cuda(), requires_grad=True)
     else:
-        res = torch.tensor(0).float()
+        res = Variable(torch.tensor(0).float(), requires_grad=True)
 
     for i in range(x.shape[1]):
         gauss = F.conv3d(x[:, i:i+1, :, :, :],
-                         kernel[np.newaxis, :], bias=None, stride=1, padding=(2, 2, 2))
+                         kernel[np.newaxis, :], bias=None, stride=1, padding=(5, 5, 5))
         mul = torch.mul(x[:, i:i+1, :, :, :], gauss)
         numerator = torch.sum(mul)
         sum_gauss = torch.sum(gauss)
@@ -106,7 +106,9 @@ def main():
     else:
         model = autoencoder()
     criterion = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
+    print('parameters', model.parameters())
+    optimizer = torch.optim.SGD(model.parameters(), lr=1e-1)
 
     print("begin training")
     num_iteration = 0
@@ -123,29 +125,37 @@ def main():
             # ===================forward=====================
             output, latent = model(img)
             reconstruction_loss = criterion(output, img)
-            loss = reconstruction_loss + Lambda * model.soft_cut_loss
+
+            # loss = reconstruction_loss + Lambda * model.soft_cut_loss
+            loss = model.soft_cut_loss
+
             writer.add_scalar('Train/Loss', loss, num_iteration)
             writer.add_scalar('Train/ReconstructionLoss', reconstruction_loss, num_iteration)
             writer.add_scalar('Train/SoftCutLoss', model.soft_cut_loss, num_iteration)
             writer.add_scalar('Train/Loss', loss, num_iteration)
-            if num_iteration % 500 == 0:
+
+            if num_iteration % 200 == 0:
                 writer.add_image('Train/Input', img.data[0, :, 20], num_iteration)
                 writer.add_image('Train/Output', output.data[0, :, 20], num_iteration)
                 np.save(os.path.join(logdir, 'kernel_' + str(num_iteration)), model.soft_cut_kernel[0])
                 np.save(os.path.join(logdir, 'output_' + str(num_iteration)), output.data[0, 0])
                 np.save(os.path.join(logdir, 'input_' + str(num_iteration)), img.data[0, 0])
-                np.save(os.path.join(logdir, 'latent_' + str(num_iteration)), latent.data[0, 0])
+                np.save(os.path.join(logdir, 'latent1_' + str(num_iteration)), latent.data[0, 0])
+                np.save(os.path.join(logdir, 'latent2_' + str(num_iteration)), latent.data[1, 0])
+
             # ===================backward====================
             optimizer.zero_grad()
             loss.backward()
+
+            print('gradient', loss.grad, type(loss))
+
             optimizer.step()
             num_iteration += 1
+
         # ===================log========================
         print('epoch [{}/{}], loss:{:.4f}'
               .format(epoch + 1, num_epochs, loss.data))
-        if epoch % 10 == 0:
-            # check the output
-            print('save picture')
+
         torch.save(model.state_dict(), os.path.join(savedmodeldir, 'sim_autoencoder.pth'))
 
 
