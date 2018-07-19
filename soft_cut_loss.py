@@ -12,9 +12,9 @@ import torch.nn.functional as F
 
 def normalizedSoftCutLoss(input, kernel):
     for i in range(input.shape[1]):
-        gauss = Variable(F.conv3d(input[:, i:i + 1, :, :, :],
-                                  kernel[np.newaxis, :], bias=None, stride=1, padding=(5, 5, 5)))
-        gauss = Variable(gauss, requires_grad=True)
+        gauss = F.conv3d(input[:, i:i + 1, :, :, :],
+                                  kernel[np.newaxis, :], bias=None, stride=1, padding=(5, 5, 5))
+        gauss =gauss
         mul = torch.mul(input[:, i:i + 1, :, :, :], gauss)
         numerator = torch.sum(mul)
         sum_gauss = torch.sum(gauss)
@@ -23,8 +23,8 @@ def normalizedSoftCutLoss(input, kernel):
         res = numerator / denom
         # res = (torch.sum(torch.mul(x[:, i:i + 1, :, :, :], F.conv3d(x[:, i:i + 1, :, :, :], kernel[np.newaxis, :], bias=None, stride=1,padding=(5, 5, 5))))) / (torch.sum(torch.mul(x[:, i:i + 1, :, :, :],torch.sum(F.conv3d(x[:, i:i + 1, :, :, :],kernel[np.newaxis, :], bias=None, stride=1,padding=(5, 5, 5))))))
         #print(res)
-    result =torch.add(torch.mul(res, -1), 20)#input.shape[1] - res
-    print('result :', result.type())
+    result =torch.add(torch.mul(res, -1), input.shape[1])#input.shape[1] - res
+    print('result :', res, result.type())
     return result
 
 class Soft_cut_loss(nn.Module):
@@ -38,12 +38,6 @@ class Soft_cut_loss(nn.Module):
         #     res = Variable(torch.tensor(0).float().cuda(), requires_grad=True)
         # else:
         #     res = Variable(torch.tensor(0).float(), requires_grad=True)
-
-        # kernel = Variable(kernel, requires_grad=True)
-        # x = Variable(x, requires_grad=True)
-        # print( res.type())
-        # print( kernel.type())
-        # print(x.type())
         return normalizedSoftCutLoss(x, kernel)
 
 

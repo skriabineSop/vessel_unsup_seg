@@ -15,9 +15,9 @@ num_epochs = 100
 batch_size = 128
 learning_rate = 1e-3
 
-#datadir = '/mnt/raid/UnsupSegment/patches/10-43-24_IgG_UltraII[02 x 05]_C00' # ordi fixe
-datadir = '/home/sophie.skriabine/Documents/brainSeg/patches' # ordi perso
-logdir = 'logs'
+datadir = '/mnt/raid/UnsupSegment/patches/10-43-24_IgG_UltraII[02 x 05]_C00' # ordi fixe
+#datadir = '/home/sophie.skriabine/Documents/brainSeg/patches' # ordi perso
+logdir = 'logs/training190718_1'
 savedmodeldir = 'savedModels'
 sigma = 4
 kernel_size = 11
@@ -83,11 +83,10 @@ class autoencoder(nn.Module):
 
     def forward(self, x):
         x = self.encoder(x)
-        latent = x
         self.soft_cut_loss = soft_cut_loss(x, self.soft_cut_kernel)
         self.intermediate = x
         x = self.decoder(x)
-        return x, latent
+        return x, self.intermediate
 
 
 def preprocess(x):
@@ -114,8 +113,8 @@ def main():
 
     # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
     print('parameters', model.parameters())
-    optimizer = torch.optim.SGD(model.parameters(), lr=1e-1)
-
+    optimizer_encoder = torch.optim.SGD(model.encoder.parameters(), lr=1e-2)
+    optimizer_model = torch.optim.SGD(model.parameters(), lr=1e-2)
     print("begin training")
     num_iteration = 0
 
@@ -131,11 +130,12 @@ def main():
             # ===================forward=====================
             output, latent = model(img)
             reconstruction_loss = criterion1(output, img)
-            soft_loss = criterion2(Variable(model.intermediate, requires_grad=True), Variable(model.soft_cut_kernel, requires_grad=True))
+            soft_loss = criterion2(model.intermediate, model.soft_cut_kernel)
             # loss = reconstruction_loss + Lambda * model.soft_cut_loss
             # loss = model.soft_cut_loss
-            loss = reconstruction_loss + Lambda*soft_loss
+            loss = soft_loss
 
+            # ===================get infos=====================
             writer.add_scalar('Train/Loss', loss, num_iteration)
             writer.add_scalar('Train/ReconstructionLoss', reconstruction_loss, num_iteration)
             writer.add_scalar('Train/SoftCutLoss', model.soft_cut_loss, num_iteration)
@@ -144,22 +144,32 @@ def main():
             if num_iteration % 200 == 0:
                 writer.add_image('Train/Input', img.data[0, :, 20], num_iteration)
                 writer.add_image('Train/Output', output.data[0, :, 20], num_iteration)
+                writer.add_image('Train/latent', latent.data[0, :, 20], num_iteration)
                 np.save(os.path.join(logdir, 'kernel_' + str(num_iteration)), model.soft_cut_kernel[0])
                 np.save(os.path.join(logdir, 'output_' + str(num_iteration)), output.data[0, 0])
                 np.save(os.path.join(logdir, 'input_' + str(num_iteration)), img.data[0, 0])
                 np.save(os.path.join(logdir, 'latent1_' + str(num_iteration)), latent.data[0, 0])
-                #np.save(os.path.join(logdir, 'latent2_' + str(num_iteration)), latent.data[1, 0])
+                np.save(os.path.join(logdir, 'latent2_' + str(num_iteration)), latent.data[1, 0])
 
             # ===================backward====================
-            optimizer.zero_grad()
+            optimizer_model.zero_grad()
             loss.backward()
 
-            print('gradient', loss.grad, type(loss))
+            #print('gradient', loss.grad, type(loss))
+            print('loss', loss)
+            # for name, param in model.named_parameters():
+            #     if param.requires_grad:
+            #         print(name, param.data)
+            optimizer_model.step()
 
-            optimizer.step()
+
+            # loss = reconstruction_loss
+            # print('gradient', loss.grad, type(loss))
+            # optimizer_model.zero_grad()
+            # optimizer_model.step()
+
             num_iteration += 1
-
-        # ===================log========================
+            # ===================log========================
         print('epoch [{}/{}], loss:{:.4f}'
               .format(epoch + 1, num_epochs, loss.data))
 
