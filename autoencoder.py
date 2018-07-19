@@ -16,7 +16,7 @@ batch_size = 128
 learning_rate = 1e-3
 
 #datadir = '/mnt/raid/UnsupSegment/patches/10-43-24_IgG_UltraII[02 x 05]_C00' # ordi fixe
-datadir = '/home/sophie.skriabine/Documents/brainSeg/patches' # ordi fixe
+datadir = '/home/sophie.skriabine/Documents/brainSeg/patches' # ordi perso
 logdir = 'logs'
 savedmodeldir = 'savedModels'
 sigma = 4
@@ -134,7 +134,7 @@ def main():
             soft_loss = criterion2(Variable(model.intermediate, requires_grad=True), Variable(model.soft_cut_kernel, requires_grad=True))
             # loss = reconstruction_loss + Lambda * model.soft_cut_loss
             # loss = model.soft_cut_loss
-            loss = soft_loss
+            loss = reconstruction_loss + Lambda*soft_loss
 
             writer.add_scalar('Train/Loss', loss, num_iteration)
             writer.add_scalar('Train/ReconstructionLoss', reconstruction_loss, num_iteration)
