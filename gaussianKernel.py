@@ -9,6 +9,14 @@ import numpy as np
 import math
 
 
+def get_gaussian_filter(sigma, kernel_size):
+    if torch.cuda.is_available():
+        gauss_filter = GaussianKernel(sigma, kernel_size).kernel.float().cuda()
+    else:
+        gauss_filter = GaussianKernel(sigma, kernel_size).kernel.float()
+    return gauss_filter
+
+
 class GaussianKernel():
 
     def __init__(self, sigma, kernel_size):

@@ -8,30 +8,22 @@ from visualize import plot3d, show
 import numpy as np
 from tensorboardX import SummaryWriter
 import torch.nn.functional as F
-from gaussianKernel import GaussianKernel
+from gaussianKernel import GaussianKernel, get_gaussian_filter
 from soft_cut_loss import Soft_cut_loss
 
 num_epochs = 100
 batch_size = 128
 learning_rate = 1e-3
 
-# datadir = '/mnt/raid/UnsupSegment/patches/10-43-24_IgG_UltraII[02 x 05]_C00' # ordi fixe
-datadir = '/home/paul.bertin/PycharmProjects/vessel_unsup_seg/data/toyDataset' # ordi perso
-logdir = 'logs/training190718_1'
+datadir = '/mnt/raid/UnsupSegment/patches/10-43-24_IgG_UltraII[02 x 05]_C00' # ordi fixe
+# datadir = '/home/paul.bertin/PycharmProjects/vessel_unsup_seg/data/toyDataset' # ordi perso
+logdir = 'logs/training200718_1'
 savedmodeldir = 'savedModels'
 sigma = 4
 kernel_size = 11
 Lambda = 1  # Used to weight relative importance of reconstruction loss and min cut loss
 
 writer = SummaryWriter(logdir)
-
-
-def get_gaussian_filter(sigma, kernel_size):
-    if torch.cuda.is_available():
-        gauss_filter = GaussianKernel(sigma, kernel_size).kernel.float().cuda()
-    else:
-        gauss_filter = GaussianKernel(sigma, kernel_size).kernel.float()
-    return gauss_filter
 
 
 def soft_cut_loss(x, kernel):
@@ -70,7 +62,7 @@ class autoencoder(nn.Module):
             nn.Conv3d(32, 16, 3, stride=1, padding=(1, 1, 1)),
             nn.ReLU(True),
             nn.Conv3d(16, 2, 3, stride=1, padding=(1, 1, 1)),
-            # nn.Softmax(dim=1)
+            nn.Softmax(dim=1)
             )
 
         self.decoder = nn.Sequential(
@@ -115,12 +107,17 @@ def main():
     # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
     print('parameters', model.parameters())
     # optimizer_encoder = torch.optim.SGD(model.encoder.parameters(), lr=1e-6)
-    optimizer_model = torch.optim.SGD(model.parameters(), lr=1e+4)
+    optimizer_model = torch.optim.SGD(model.parameters(), lr=1e-1)
     print("begin training")
     num_iteration = 0
 
+    cpt = 0
+
     for epoch in range(num_epochs):
         for data in dataloader:
+
+            cpt += 1
+
             if torch.cuda.is_available():
                 img = data.float().cuda()
             else:
@@ -134,7 +131,10 @@ def main():
             soft_loss = criterion2(model.intermediate, model.soft_cut_kernel)
             # loss = reconstruction_loss + Lambda * model.soft_cut_loss
             # loss = model.soft_cut_loss
-            loss = soft_loss
+            if cpt < 1200:
+                loss = reconstruction_loss
+            else:
+                loss = soft_loss
 
             # ===================get infos=====================
             writer.add_scalar('Train/Loss', loss, num_iteration)
@@ -155,13 +155,13 @@ def main():
             # ===================backward====================
             optimizer_model.zero_grad()
             loss.backward()
-
+            #
             print('loss', loss)
-            for name, param in model.named_parameters():
-                if param.requires_grad:
-                    print(name, param.data[0])
-                    print("grad", param.grad[0])
-                    break
+            # for name, param in model.named_parameters():
+            #     if param.requires_grad:
+            #         print(name, param.data[0])
+            #         print("grad", param.grad[0])
+            #         break
             optimizer_model.step()
 
             # loss = reconstruction_loss
