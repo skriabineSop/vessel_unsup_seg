@@ -15,8 +15,8 @@ num_epochs = 100
 batch_size = 128
 learning_rate = 1e-3
 
-datadir = '/mnt/raid/UnsupSegment/patches/10-43-24_IgG_UltraII[02 x 05]_C00' # ordi fixe
-#datadir = '/home/sophie.skriabine/Documents/brainSeg/patches' # ordi perso
+# datadir = '/mnt/raid/UnsupSegment/patches/10-43-24_IgG_UltraII[02 x 05]_C00' # ordi fixe
+datadir = '/home/paul.bertin/PycharmProjects/vessel_unsup_seg/data/toyDataset' # ordi perso
 logdir = 'logs/training190718_1'
 savedmodeldir = 'savedModels'
 sigma = 4
@@ -70,7 +70,8 @@ class autoencoder(nn.Module):
             nn.Conv3d(32, 16, 3, stride=1, padding=(1, 1, 1)),
             nn.ReLU(True),
             nn.Conv3d(16, 2, 3, stride=1, padding=(1, 1, 1)),
-            nn.Softmax(dim=1))
+            # nn.Softmax(dim=1)
+            )
 
         self.decoder = nn.Sequential(
             nn.Conv3d(2, 16, 3, stride=1, padding=(1, 1, 1)),
@@ -113,8 +114,8 @@ def main():
 
     # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
     print('parameters', model.parameters())
-    optimizer_encoder = torch.optim.SGD(model.encoder.parameters(), lr=1e-2)
-    optimizer_model = torch.optim.SGD(model.parameters(), lr=1e-2)
+    # optimizer_encoder = torch.optim.SGD(model.encoder.parameters(), lr=1e-6)
+    optimizer_model = torch.optim.SGD(model.parameters(), lr=1e+4)
     print("begin training")
     num_iteration = 0
 
@@ -155,13 +156,13 @@ def main():
             optimizer_model.zero_grad()
             loss.backward()
 
-            #print('gradient', loss.grad, type(loss))
             print('loss', loss)
-            # for name, param in model.named_parameters():
-            #     if param.requires_grad:
-            #         print(name, param.data)
+            for name, param in model.named_parameters():
+                if param.requires_grad:
+                    print(name, param.data[0])
+                    print("grad", param.grad[0])
+                    break
             optimizer_model.step()
-
 
             # loss = reconstruction_loss
             # print('gradient', loss.grad, type(loss))

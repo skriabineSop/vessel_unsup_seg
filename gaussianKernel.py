@@ -8,9 +8,6 @@ from visualize import plot3d, show
 import numpy as np
 import math
 
-kernel_size = 11
-sigma = 3
-
 
 class GaussianKernel():
 
@@ -28,17 +25,20 @@ class GaussianKernel():
                     vec = [i, j, k]
                     kernel[i, j, k] = (1. / (2. * math.pi * variance)) * \
                                       np.exp(-(np.linalg.norm(vec - mean) ** 2.) / (2 * variance))
-        gaussian_kernel = kernel / np.sum(kernel)
-        gaussian_kernel = gaussian_kernel.reshape((1,) + gaussian_kernel.shape)
 
+        kernel = kernel / np.max(kernel)
+        gaussian_kernel = kernel.reshape((1,) + kernel.shape)
         gaussian_kernel = torch.from_numpy(gaussian_kernel)
+
         self.kernel = gaussian_kernel
 
 
 if __name__ == "__main__":
+
+    kernel_size = 11
+    sigma = 3
+
     img = GaussianKernel(sigma, kernel_size).kernel
-
     print(np.array(img).reshape((kernel_size, kernel_size, kernel_size)))
-
     plot3d(np.array(img).reshape((kernel_size, kernel_size, kernel_size)))
     show()
