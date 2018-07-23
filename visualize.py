@@ -86,8 +86,8 @@ def reconstructionView(readdir, N):
 
 if __name__ == '__main__':
 
-    readdir = 'logs/training230718_5'
-    N = 9400
+    readdir = 'logs/training230718_8'
+    N = 7400
 
     reconstructionView(readdir, N)
 
@@ -101,5 +101,5 @@ if __name__ == '__main__':
 
     vb1, vb2 = get_two_views()
     plot3d(latent1, view=vb1)
-    plot3d(latent2, view=vb2)
+    plot3d(input, view=vb2)
     show()
