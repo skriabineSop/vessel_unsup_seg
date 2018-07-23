@@ -86,8 +86,8 @@ def reconstructionView(readdir, N):
 
 if __name__ == '__main__':
 
-    readdir = 'logs/training200718_1'
-    N = 1000
+    readdir = 'logs/training230718_4'
+    N = 1400
 
     reconstructionView(readdir, N)
 
