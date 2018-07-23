@@ -17,8 +17,8 @@ learning_rate = 1e-3
 
 datadir = '/mnt/raid/UnsupSegment/patches/10-43-24_IgG_UltraII[02 x 05]_C00' # ordi fixe
 # datadir = '/home/paul.bertin/PycharmProjects/vessel_unsup_seg/data/toyDataset' # ordi perso
-logdir = 'logs/training230718_6'
-savedmodeldir = 'savedModels/230718_6/'
+logdir = 'logs/training230718_8'
+savedmodeldir = 'savedModels/230718_8/'
 sigma = 4
 kernel_size = 11
 Lambda = 0.6  # Used to weight relative importance of reconstruction loss and min cut loss
@@ -61,12 +61,12 @@ class autoencoder(nn.Module):
             nn.ReLU(True),
             nn.Conv3d(32, 16, 3, stride=1, padding=(1, 1, 1)),
             nn.ReLU(True),
-            nn.Conv3d(16, 5, 3, stride=1, padding=(1, 1, 1)),
+            nn.Conv3d(16, 2, 3, stride=1, padding=(1, 1, 1)),
             nn.Softmax(dim=1)
             )
 
         self.decoder = nn.Sequential(
-            nn.Conv3d(5, 16, 3, stride=1, padding=(1, 1, 1)),
+            nn.Conv3d(2, 16, 3, stride=1, padding=(1, 1, 1)),
             nn.ReLU(True),
             nn.Conv3d(16, 32, 3, stride=1, padding=(1, 1, 1)),
             nn.ReLU(True),
@@ -77,6 +77,8 @@ class autoencoder(nn.Module):
     def forward(self, x):
         x = self.encoder(x)
         #self.soft_cut_loss = soft_cut_loss(x, self.soft_cut_kernel)
+        thresh=Variable(torch.Tensor([1/x.data.shape[1]])).float().cuda()
+        x=(x>=thresh).float().cuda()
         self.intermediate = x
         x = self.decoder(x)
         return x, self.intermediate
@@ -131,10 +133,10 @@ def main():
             soft_loss = criterion2(model.intermediate, model.soft_cut_kernel)
             # loss = reconstruction_loss + Lambda * model.soft_cut_loss
             # loss = model.soft_cut_loss
-            if cpt < 1200:
+            if cpt < 2000:
                 print('cpt<1200')
                 loss = reconstruction_loss
-            elif cpt < 2400  and cpt > 1200:
+            elif cpt < 4000  and cpt > 2000:
                 Lambda = l*(cpt-1200.)/1200
                 print('lanbda:', Lambda)
                 loss = reconstruction_loss + (Lambda*soft_loss)
@@ -151,9 +153,9 @@ def main():
                 writer.add_image('Train/Output', output.data[0, :, :, :, 20], num_iteration)
                 writer.add_image('Train/latent1', latent.data[0, 0, :, :, 20], num_iteration)
                 writer.add_image('Train/latent2', latent.data[0, 1, :, :, 20], num_iteration)
-                writer.add_image('Train/latent3', latent.data[0, 2, :, :, 20], num_iteration)
-                writer.add_image('Train/latent4', latent.data[0, 3, :, :, 20], num_iteration)
-                writer.add_image('Train/latent5', latent.data[0, 4, :, :, 20], num_iteration)
+                # writer.add_image('Train/latent3', latent.data[0, 2, :, :, 20], num_iteration)
+                # writer.add_image('Train/latent4', latent.data[0, 3, :, :, 20], num_iteration)
+                # writer.add_image('Train/latent5', latent.data[0, 4, :, :, 20], num_iteration)
 
 
                 np.save(os.path.join(logdir, 'kernel_' + str(num_iteration)), model.soft_cut_kernel[0])
@@ -161,9 +163,9 @@ def main():
                 np.save(os.path.join(logdir, 'input_' + str(num_iteration)), img.data[0, 0])
                 np.save(os.path.join(logdir, 'latent1_' + str(num_iteration)), latent.data[0, 0])
                 np.save(os.path.join(logdir, 'latent2_' + str(num_iteration)), latent.data[0, 1])
-                np.save(os.path.join(logdir, 'latent1_' + str(num_iteration)), latent.data[0, 2])
-                np.save(os.path.join(logdir, 'latent2_' + str(num_iteration)), latent.data[0, 3])
-                np.save(os.path.join(logdir, 'latent1_' + str(num_iteration)), latent.data[0, 4])
+                # np.save(os.path.join(logdir, 'latent3_' + str(num_iteration)), latent.data[0, 2])
+                # np.save(os.path.join(logdir, 'latent4_' + str(num_iteration)), latent.data[0, 3])
+                # np.save(os.path.join(logdir, 'latent5 _' + str(num_iteration)), latent.data[0, 4])
 
             # ===================backward====================
             optimizer_model.zero_grad()
