@@ -18,42 +18,45 @@ def normalizedSoftCutLoss(input, kernel):
     for i in range(input.shape[1]):
         gauss = F.conv3d(input[:, i:i + 1, :, :, :],
                                   kernel[np.newaxis, :], bias=None, stride=1, padding=(5, 5, 5))
-        print("gauss", gauss.shape, gauss)
-        #np.save(os.path.join(logdir, 'gauss' + 'test', gauss.data[0, 0]))
+        # print("gauss", gauss.shape, gauss)
+        # np.save(os.path.join(logdir, 'gauss' + 'test', gauss.data[0, 0]))
         # plot3d(np.array(input.data[0,0]).reshape((40, 40, 40)))
         # show()
         # plot3d(np.array(gauss.data).reshape((40, 40, 40)))
         # show()
-        print("input", input.shape)
+        # print("input", input.shape)
         mul = torch.mul(input[:, i:i + 1, :, :, :], gauss)
         # plot3d(np.array(gauss.data).reshape((40, 40, 40)))
         # show()
-        print("mul", mul.shape)
-        print("mul", mul)
+        #print("mul", mul.shape)
+        # print("mul", mul)
 
         numerator = torch.sum(mul)
 
-        print("numerator", numerator)
+        #print("numerator", numerator)
 
         # sum_gauss = torch.sum(kernel)
         sum_gauss = F.conv3d(ones[:, i:i + 1, :, :, :],
                          kernel[np.newaxis, :], bias=None, stride=1, padding=(5, 5, 5))
 
-        print("sum gauss", sum_gauss)
+       # print("sum gauss", sum_gauss)
 
         sub_denom = torch.mul(input[:, i:i + 1, :, :, :], sum_gauss)
 
-        print("sub denom", sub_denom)
+        #print("sub denom", sub_denom)
 
         denom = torch.sum(sub_denom)
 
-        print("denom", denom)
+        #print("denom", denom)
 
         res += numerator / denom
 
         print("res", res)
 
-    result =torch.add(torch.mul(res, -1), input.shape[1])
+    #result =torch.add(torch.mul(res, -1), input.shape[1])
+    print (input.shape[1])
+    result = input.shape[1]-res
+    print("soft cut loss", result)
     return result
 
 
@@ -70,7 +73,7 @@ if __name__ == "__main__":
 
     ones = np.ones((1, 2, 20, 40, 40))
     zeros = np.zeros((1, 2, 20, 40, 40))
-    latent = np.concatenate((ones, ones), axis=2)
+    latent = np.concatenate((ones*0.5, ones*0.5), axis=2)
     latent = torch.from_numpy(latent).cuda().float()
 
     criterion2 = Soft_cut_loss()
