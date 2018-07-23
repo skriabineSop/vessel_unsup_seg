@@ -17,34 +17,34 @@ learning_rate = 1e-3
 
 datadir = '/mnt/raid/UnsupSegment/patches/10-43-24_IgG_UltraII[02 x 05]_C00' # ordi fixe
 # datadir = '/home/paul.bertin/PycharmProjects/vessel_unsup_seg/data/toyDataset' # ordi perso
-logdir = 'logs/training200718_1'
+logdir = 'logs/training230718_5'
 savedmodeldir = 'savedModels'
 sigma = 4
 kernel_size = 11
-Lambda = 1  # Used to weight relative importance of reconstruction loss and min cut loss
-
+Lambda = 0.6  # Used to weight relative importance of reconstruction loss and min cut loss
+l=0.01
 writer = SummaryWriter(logdir)
 
 
-def soft_cut_loss(x, kernel):
-    if torch.cuda.is_available():
-        res = Variable(torch.tensor(0).float().cuda(), requires_grad=True)
-    else:
-        res = Variable(torch.tensor(0).float(), requires_grad=True)
-
-    for i in range(x.shape[1]):
-        gauss = F.conv3d(x[:, i:i+1, :, :, :],
-                         kernel[np.newaxis, :], bias=None, stride=1, padding=(5, 5, 5))
-        mul = torch.mul(x[:, i:i+1, :, :, :], gauss)
-        numerator = torch.sum(mul)
-        sum_gauss = torch.sum(gauss)
-        sub_denom = torch.mul(x[:, i:i+1, :, :, :], sum_gauss)
-        denom = torch.sum(sub_denom)
-        res = numerator/denom
-
-    result = x.shape[1] - res
-
-    return result
+# def soft_cut_loss(x, kernel):
+#     if torch.cuda.is_available():
+#         res = Variable(torch.tensor(0).float().cuda(), requires_grad=True)
+#     else:
+#         res = Variable(torch.tensor(0).float(), requires_grad=True)
+#
+#     for i in range(x.shape[1]):
+#         gauss = F.conv3d(x[:, i:i+1, :, :, :],
+#                          kernel[np.newaxis, :], bias=None, stride=1, padding=(5, 5, 5))
+#         mul = torch.mul(x[:, i:i+1, :, :, :], gauss)
+#         numerator = torch.sum(mul)
+#         sum_gauss = torch.sum(gauss)
+#         sub_denom = torch.mul(x[:, i:i+1, :, :, :], sum_gauss)
+#         denom = torch.sum(sub_denom)
+#         res = numerator/denom
+#
+#     result = x.shape[1] - res
+#
+#     return result
 
 
 # autoencoder test
@@ -76,7 +76,7 @@ class autoencoder(nn.Module):
 
     def forward(self, x):
         x = self.encoder(x)
-        self.soft_cut_loss = soft_cut_loss(x, self.soft_cut_kernel)
+        #self.soft_cut_loss = soft_cut_loss(x, self.soft_cut_kernel)
         self.intermediate = x
         x = self.decoder(x)
         return x, self.intermediate
@@ -104,10 +104,10 @@ def main():
     criterion1 = nn.MSELoss()
     criterion2 = Soft_cut_loss()
 
-    # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
-    print('parameters', model.parameters())
-    # optimizer_encoder = torch.optim.SGD(model.encoder.parameters(), lr=1e-6)
-    optimizer_model = torch.optim.SGD(model.parameters(), lr=1e-1)
+    optimizer_model = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
+    # print('parameters', model.parameters())
+    # optimizer_encoder = torch.optim.Adam(model.encoder.parameters(), lr=1e-6)
+    # optimizer_model = torch.optim.SGD(model.parameters(), lr=1e-1)
     print("begin training")
     num_iteration = 0
 
@@ -132,31 +132,38 @@ def main():
             # loss = reconstruction_loss + Lambda * model.soft_cut_loss
             # loss = model.soft_cut_loss
             if cpt < 1200:
+                print('cpt<1200')
                 loss = reconstruction_loss
+            elif cpt < 2400  and cpt > 1200:
+                Lambda = l*(cpt-1200.)/1200
+                print('lanbda:', Lambda)
+                loss = reconstruction_loss + (Lambda*soft_loss)
             else:
-                loss = soft_loss
-
+                loss = reconstruction_loss + l*soft_loss
             # ===================get infos=====================
             writer.add_scalar('Train/Loss', loss, num_iteration)
             writer.add_scalar('Train/ReconstructionLoss', reconstruction_loss, num_iteration)
-            writer.add_scalar('Train/SoftCutLoss', model.soft_cut_loss, num_iteration)
+            writer.add_scalar('Train/SoftCutLoss', soft_loss, num_iteration)
             writer.add_scalar('Train/Loss', loss, num_iteration)
 
             if num_iteration % 200 == 0:
-                writer.add_image('Train/Input', img.data[0, :, 20], num_iteration)
-                writer.add_image('Train/Output', output.data[0, :, 20], num_iteration)
-                writer.add_image('Train/latent', latent.data[0, :, 20], num_iteration)
+                writer.add_image('Train/Input', img.data[0, :, :, :, 20], num_iteration)
+                writer.add_image('Train/Output', output.data[0, :, :, :, 20], num_iteration)
+                writer.add_image('Train/latent1', latent.data[0, 0, :, :, 20], num_iteration)
+                writer.add_image('Train/latent2', latent.data[0, 1, :, :, 20], num_iteration)
+
                 np.save(os.path.join(logdir, 'kernel_' + str(num_iteration)), model.soft_cut_kernel[0])
                 np.save(os.path.join(logdir, 'output_' + str(num_iteration)), output.data[0, 0])
                 np.save(os.path.join(logdir, 'input_' + str(num_iteration)), img.data[0, 0])
                 np.save(os.path.join(logdir, 'latent1_' + str(num_iteration)), latent.data[0, 0])
-                np.save(os.path.join(logdir, 'latent2_' + str(num_iteration)), latent.data[1, 0])
+                np.save(os.path.join(logdir, 'latent2_' + str(num_iteration)), latent.data[0, 1])
 
             # ===================backward====================
             optimizer_model.zero_grad()
             loss.backward()
             #
             print('loss', loss)
+            print('reconstruction loss:', reconstruction_loss)
             # for name, param in model.named_parameters():
             #     if param.requires_grad:
             #         print(name, param.data[0])
@@ -164,15 +171,19 @@ def main():
             #         break
             optimizer_model.step()
 
-            # loss = reconstruction_loss
-            # print('gradient', loss.grad, type(loss))
-            # optimizer_model.zero_grad()
-            # optimizer_model.step()
+            # loss2 = reconstruction_loss
+            # # print('gradient', loss.grad, type(loss))
+            # optimizer_encoder.zero_grad()
+            # loss2.backward()
+            # optimizer_encoder.step()
 
             num_iteration += 1
+
+            if num_iteration % 1000 == 0:
+                torch.save(model.state_dict(), os.path.join(savedmodeldir, 'sim_autoencoder'+str(num_iteration)+'.pth'))
             # ===================log========================
-        print('epoch [{}/{}], loss:{:.4f}'
-              .format(epoch + 1, num_epochs, loss.data))
+        print('epoch [{}/{}]'
+              .format(epoch + 1, num_epochs))
 
         torch.save(model.state_dict(), os.path.join(savedmodeldir, 'sim_autoencoder.pth'))
 
