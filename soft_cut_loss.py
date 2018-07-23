@@ -12,7 +12,7 @@ from gaussianKernel import get_gaussian_filter
 logdir = 'logs'
 
 def normalizedSoftCutLoss(input, kernel):
-    ones = torch.from_numpy(np.ones((1, 2, 40, 40, 40))).cuda().float()
+    ones = torch.from_numpy(np.ones((1, input.shape[1], 40, 40, 40))).cuda().float()
     res = torch.from_numpy(np.zeros(1)).cuda().float()
     print("res", res)
     for i in range(input.shape[1]):
