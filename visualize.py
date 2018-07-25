@@ -9,6 +9,31 @@ import os
 import TurntableCamera as tc
 
 
+class twoClassesMap(vispy.color.colormap.BaseColormap):
+    glsl_map = """
+    vec4 threeclasses(float t) {
+        if(t == 0){
+            return vec4(0, 0, 0, 0);
+        }
+        else if (t == 1) {
+            return vec4(0.8, 0.1, 0.1, 0.3);
+        }
+        else {
+            return vec4(0.8, 0.1, 0.1, 0.3);
+        }
+    }
+    """
+    """
+    t should take values in 0, 1, 2
+    """
+
+    def map(self, t):
+        if isinstance(t, np.ndarray):
+            return np.hstack([t, 0.1, 1-t, 1]).astype(np.float32)
+        else:
+            return np.array([t, 0.1, 1-t, 1], dtype=np.float32)
+
+
 class FireMap(vispy.color.colormap.BaseColormap):
     colors = [(1.0, 1.0, 1.0, 0.0),
               (1.0, 1.0, 0.0, 0.05),
@@ -78,6 +103,9 @@ def reconstructionView(readdir, N):
     img = np.load(os.path.join(readdir, 'input_' + str(N) + '.npy'))
     output = np.load(os.path.join(readdir, 'output_' + str(N) + '.npy'))
 
+    print("img", np.unique(img))
+    print("output", np.unique(output))
+
     vb1, vb2 = get_two_views()
     plot3d(img, view=vb1)
     plot3d(output, view=vb2)
@@ -86,8 +114,8 @@ def reconstructionView(readdir, N):
 
 if __name__ == '__main__':
 
-    readdir = 'logs/training230718_8'
-    N = 7400
+    readdir = 'logs/training250718_2'
+    N = 17800
 
     reconstructionView(readdir, N)
 
@@ -100,6 +128,8 @@ if __name__ == '__main__':
     print('latent2 min max', np.min(latent2), np.max(latent2))
 
     vb1, vb2 = get_two_views()
+
+    print(np.unique(latent2))
     plot3d(latent1, view=vb1)
     plot3d(input, view=vb2)
     show()
