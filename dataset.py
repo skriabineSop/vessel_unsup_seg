@@ -26,5 +26,7 @@ class Dataset(Dataset):
 
     def __getitem__(self, idx):
         image = np.load(os.path.join(self.load_dir, self.data[idx])).astype(float)
-        image = image.reshape((1,) + image.shape)
+        neg_image = -image
+        image = np.concatenate((neg_image[np.newaxis, :], image[np.newaxis, :]), axis=0)
+        #image = image.reshape((1,) + image.shape)
         return image
