@@ -14,7 +14,7 @@ logdir = 'logs'
 def normalizedSoftCutLoss(input, kernel, normalized=True):
     ones = torch.from_numpy(np.ones((1, input.shape[1], 40, 40, 40))).cuda().float()
     res = torch.from_numpy(np.zeros(1)).cuda().float()
-    print("res", res)
+    # print("res", res)
     for i in range(input.shape[1]):
         gauss = F.conv3d(input[:, i:i + 1, :, :, :],
                                   kernel[np.newaxis, :], bias=None, stride=1, padding=(5, 5, 5))
@@ -35,7 +35,7 @@ def normalizedSoftCutLoss(input, kernel, normalized=True):
             res += numerator
 
     result = input.shape[1] - res
-    print("soft cut loss", result)
+    # print("soft cut loss", result)
 
     return result
 

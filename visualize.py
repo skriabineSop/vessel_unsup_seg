@@ -114,22 +114,24 @@ def reconstructionView(readdir, N):
 
 if __name__ == '__main__':
 
-    readdir = 'logs/training250718_2'
-    N = 17800
+    readdir = 'logs/training270718_softcut2'
+    N = 4800
 
     reconstructionView(readdir, N)
 
     input = np.load(os.path.join(readdir, 'input_' + str(N) + '.npy'))
-    latent1 = np.load(os.path.join(readdir, 'latent1_' + str(N) + '.npy'))
-    latent2 = np.load(os.path.join(readdir, 'latent2_' + str(N) + '.npy'))
+    latent1 = np.load(os.path.join(readdir, 'latent1_' + str(N) + '.npy'))[3:37, 3:37, 3:37]
+    latent2 = np.load(os.path.join(readdir, 'latent2_' + str(N) + '.npy'))[3:37, 3:37, 3:37]
 
+
+    print(latent1.shape)
 
     print('latent1 min max', np.min(latent1), np.max(latent1))
     print('latent2 min max', np.min(latent2), np.max(latent2))
 
     vb1, vb2 = get_two_views()
 
-    print(np.unique(latent2))
-    plot3d(latent1, view=vb1)
+    print(np.unique(latent1))
+    plot3d(latent2, view=vb1)
     plot3d(input, view=vb2)
     show()
